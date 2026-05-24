@@ -118,19 +118,28 @@
     <script>
         // Array containing the visual text and the spoken text
         const notes = [
-            { display: 'C', speech: 'C' },
-            { display: 'C#', speech: 'C sharp' },
-            { display: 'D', speech: 'D' },
-            { display: 'D#', speech: 'D sharp' },
-            { display: 'E', speech: 'E' },
-            { display: 'F', speech: 'F' },
-            { display: 'F#', speech: 'F sharp' },
-            { display: 'G', speech: 'G' },
-            { display: 'G#', speech: 'G sharp' },
-            { display: 'A', speech: 'A' },
-            { display: 'A#', speech: 'A sharp' },
-            { display: 'B', speech: 'B' }
+            { display: 'C', file: 'C.mp3' },
+            { display: 'C#', file: 'C_sharp.mp3' },
+            { display: 'D', file: 'D.mp3' },
+            { display: 'D#', file: 'D_sharp.mp3' },
+            { display: 'E', file: 'E.mp3' },
+            { display: 'F', file: 'F.mp3' },
+            { display: 'F#', file: 'F_sharp.mp3' },
+            { display: 'G', file: 'G.mp3' },
+            { display: 'G#', file: 'G_sharp.mp3' },
+            { display: 'A', file: 'A.mp3' },
+            { display: 'A#', file: 'A_sharp.mp3' },
+            { display: 'B', file: 'B.mp3' }
         ];
+
+        const stringSounds = {
+            'Low E string': 'string_low_e.mp3',
+            'A string': 'string_a.mp3',
+            'D string': 'string_d.mp3',
+            'G string': 'string_g.mp3',
+            'B string': 'string_b.mp3',
+            'High E string': 'string_high_e.mp3'
+        };
 
         const container = document.getElementById('noteContainer');
         const playBtn = document.getElementById('playBtn');
@@ -139,6 +148,7 @@
         const stringDisplay = document.getElementById('stringDisplay');
 
         let isPlaying = false;
+        let currentAudio = null;
 
         // Dynamically build the grid on the screen
         notes.forEach((note, index) => {
@@ -152,10 +162,26 @@
         // Helper function to create a delay
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+        // Helper to play a sound file and wait for it to finish
+        const playAudio = (filename) => {
+            return new Promise(resolve => {
+                if (!isPlaying) return resolve();
+                currentAudio = new Audio(`sound_files/${filename}`);
+                currentAudio.onended = resolve;
+                currentAudio.onerror = () => {
+                    console.error(`Error loading: sound_files/${filename}`);
+                    resolve();
+                };
+                currentAudio.play().catch(resolve);
+            });
+        };
+
         stopBtn.addEventListener('click', () => {
             isPlaying = false;
-            // Cancel any speech that might currently be happening
-            window.speechSynthesis.cancel();
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
             playBtn.disabled = false;
             stopBtn.disabled = true;
             stringDisplay.textContent = 'Stopped';
@@ -197,15 +223,7 @@
                     const randomString = selectedStrings[Math.floor(Math.random() * selectedStrings.length)];
                     stringDisplay.textContent = randomString;
 
-                    const stringUtterance = new SpeechSynthesisUtterance(randomString);
-                    stringUtterance.rate = 1.0;
-                    window.speechSynthesis.speak(stringUtterance);
-
-                    // Wait for the string announcement to finish
-                    await new Promise(resolve => {
-                        stringUtterance.onend = resolve;
-                        setTimeout(resolve, 1000); // Safety fallback
-                    });
+                    await playAudio(stringSounds[randomString]);
 
                     if (!isPlaying) return;
                     // Add a delay between string name and note name
@@ -215,17 +233,7 @@
                     // Add highlight effect to the current note
                     noteElement.classList.add('highlight');
 
-                    // Prepare the browser's speech synthesis
-                    const utterance = new SpeechSynthesisUtterance(currentNote.speech);
-                    utterance.rate = 1.0; 
-                    
-                    window.speechSynthesis.speak(utterance);
-
-                    // Wait for the spoken word to finish
-                    await new Promise(resolve => {
-                        utterance.onend = resolve;
-                        setTimeout(resolve, 1500); 
-                    });
+                    await playAudio(currentNote.file);
 
                     // Remove highlight
                     noteElement.classList.remove('highlight');
