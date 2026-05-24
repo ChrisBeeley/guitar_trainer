@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12 Note Scale Speaker</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+            background-color: #f4f4f9;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .note {
+            padding: 20px 30px;
+            background-color: white;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            transition: background-color 0.1s, transform 0.1s;
+        }
+        /* This handles the visual highlighting */
+        .highlight {
+            background-color: #ffd700;
+            border-color: #ff8c00;
+            transform: scale(1.1);
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #stopBtn {
+            background-color: #d9534f;
+        }
+        #stopBtn:hover {
+            background-color: #c9302c;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        #stringDisplay {
+            font-size: 32px;
+            font-weight: bold;
+            color: #d9534f;
+            height: 48px;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>The 12-Note Scale</h1>
+    <div class="controls">
+        <div style="display: flex; gap: 10px;">
+            <button id="playBtn">Play Scale</button>
+            <button id="stopBtn" disabled>Stop</button>
+        </div>
+        <div>
+            <label for="speedSlider">Pause Duration (sec):</label>
+            <input type="range" id="speedSlider" min="0.2" max="9" step="0.1" value="1.0">
+        </div>
+    </div>
+
+    <div id="stringDisplay"></div>
+    <div class="grid" id="noteContainer"></div>
+
+    <script>
+        // Array containing the visual text and the spoken text
+        const notes = [
+            { display: 'C', speech: 'C' },
+            { display: 'C#', speech: 'C sharp' },
+            { display: 'D', speech: 'D' },
+            { display: 'D#', speech: 'D sharp' },
+            { display: 'E', speech: 'E' },
+            { display: 'F', speech: 'F' },
+            { display: 'F#', speech: 'F sharp' },
+            { display: 'G', speech: 'G' },
+            { display: 'G#', speech: 'G sharp' },
+            { display: 'A', speech: 'A' },
+            { display: 'A#', speech: 'A sharp' },
+            { display: 'B', speech: 'B' }
+        ];
+
+        const container = document.getElementById('noteContainer');
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const stringDisplay = document.getElementById('stringDisplay');
+
+        let isPlaying = false;
+
+        // Dynamically build the grid on the screen
+        notes.forEach((note, index) => {
+            const noteElement = document.createElement('div');
+            noteElement.classList.add('note');
+            noteElement.id = 'note-' + index;
+            noteElement.textContent = note.display;
+            container.appendChild(noteElement);
+        });
+
+        // Helper function to create a delay
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        stopBtn.addEventListener('click', () => {
+            isPlaying = false;
+            // Cancel any speech that might currently be happening
+            window.speechSynthesis.cancel();
+            playBtn.disabled = false;
+            stopBtn.disabled = true;
+            stringDisplay.textContent = 'Stopped';
+            
+            // Clear any active highlights
+            document.querySelectorAll('.note').forEach(n => n.classList.remove('highlight'));
+        });
+
+        playBtn.addEventListener('click', async () => {
+            isPlaying = true;
+            playBtn.disabled = true;
+            stopBtn.disabled = false;
+            stringDisplay.textContent = '';
+
+            const guitarStrings = ['Low E string', 'A string', 'D string', 'G string', 'B string', 'High E string'];
+
+            while (isPlaying) {
+                // Create an array of indices [0, 1, 2...11] and shuffle it for each loop
+                const shuffledIndices = notes.map((_, i) => i);
+                for (let i = shuffledIndices.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffledIndices[i], shuffledIndices[j]] = [shuffledIndices[j], shuffledIndices[i]];
+                }
+
+                for (let i = 0; i < shuffledIndices.length; i++) {
+                    if (!isPlaying) return;
+
+                    const noteIndex = shuffledIndices[i];
+                    const currentNote = notes[noteIndex];
+                    const noteElement = document.getElementById('note-' + noteIndex);
+
+                    // Randomly pick a guitar string to announce before the note
+                    const randomString = guitarStrings[Math.floor(Math.random() * guitarStrings.length)];
+                    stringDisplay.textContent = randomString;
+
+                    const stringUtterance = new SpeechSynthesisUtterance(randomString);
+                    stringUtterance.rate = 1.0;
+                    window.speechSynthesis.speak(stringUtterance);
+
+                    // Wait for the string announcement to finish
+                    await new Promise(resolve => {
+                        stringUtterance.onend = resolve;
+                        setTimeout(resolve, 1000); // Safety fallback
+                    });
+
+                    if (!isPlaying) return;
+                    // Add a delay between string name and note name
+                    await sleep(1000);
+
+                    if (!isPlaying) return;
+                    // Add highlight effect to the current note
+                    noteElement.classList.add('highlight');
+
+                    // Prepare the browser's speech synthesis
+                    const utterance = new SpeechSynthesisUtterance(currentNote.speech);
+                    utterance.rate = 1.0; 
+                    
+                    window.speechSynthesis.speak(utterance);
+
+                    // Wait for the spoken word to finish
+                    await new Promise(resolve => {
+                        utterance.onend = resolve;
+                        setTimeout(resolve, 1500); 
+                    });
+
+                    // Remove highlight
+                    noteElement.classList.remove('highlight');
+                    
+                    if (!isPlaying) return;
+                    // Pause based on the slider value before moving to the next note
+                    const pauseMs = parseFloat(speedSlider.value) * 1000;
+                    await sleep(pauseMs); 
+                    stringDisplay.textContent = '';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
