@@ -67,6 +67,19 @@
             gap: 15px;
             margin-bottom: 10px;
         }
+        .string-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+        .string-selector label {
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
         #stringDisplay {
             font-size: 32px;
             font-weight: bold;
@@ -84,6 +97,14 @@
         <div style="display: flex; gap: 10px;">
             <button id="playBtn">Play Scale</button>
             <button id="stopBtn" disabled>Stop</button>
+        </div>
+        <div class="string-selector">
+            <label><input type="checkbox" class="string-check" value="Low E string" checked> Low E</label>
+            <label><input type="checkbox" class="string-check" value="A string" checked> A</label>
+            <label><input type="checkbox" class="string-check" value="D string" checked> D</label>
+            <label><input type="checkbox" class="string-check" value="G string" checked> G</label>
+            <label><input type="checkbox" class="string-check" value="B string" checked> B</label>
+            <label><input type="checkbox" class="string-check" value="High E string" checked> High E</label>
         </div>
         <div>
             <label for="speedSlider">Pause Duration (sec):</label>
@@ -144,12 +165,18 @@
         });
 
         playBtn.addEventListener('click', async () => {
+            const selectedStrings = Array.from(document.querySelectorAll('.string-check:checked'))
+                .map(cb => cb.value);
+
+            if (selectedStrings.length === 0) {
+                alert('Please select at least one string to practice!');
+                return;
+            }
+
             isPlaying = true;
             playBtn.disabled = true;
             stopBtn.disabled = false;
             stringDisplay.textContent = '';
-
-            const guitarStrings = ['Low E string', 'A string', 'D string', 'G string', 'B string', 'High E string'];
 
             while (isPlaying) {
                 // Create an array of indices [0, 1, 2...11] and shuffle it for each loop
@@ -167,7 +194,7 @@
                     const noteElement = document.getElementById('note-' + noteIndex);
 
                     // Randomly pick a guitar string to announce before the note
-                    const randomString = guitarStrings[Math.floor(Math.random() * guitarStrings.length)];
+                    const randomString = selectedStrings[Math.floor(Math.random() * selectedStrings.length)];
                     stringDisplay.textContent = randomString;
 
                     const stringUtterance = new SpeechSynthesisUtterance(randomString);
